@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic.FileIO;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -13,60 +14,90 @@ namespace Open.Cep.Migrate
             Console.Write("Write the files path: ");
             path = Console.ReadLine();
 
-            try
-            {
-                DirectoryInfo directoryInfo = new(path);
-                FileInfo[] files = directoryInfo.GetFiles();
 
-                Task<Cep[]> ceps = ReadFiles(files);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("This path directory is invalid!");
-            }
-
+            Task ceps = ReadFiles();
 
 
         }
 
-        public static async Task<Cep[]> ReadFiles(FileInfo[] files)
+        public static async Task<Cep[]> ReadFiles()
         {
-            foreach (FileInfo file in files)
+            string[] files = Directory.GetFiles(@$"{path}\Ceps");
+            List<Cep> ceps = new(await ReadCepsAsync(files));
+            List<City> cities = new(ReadCities());
+            List<State> states = new(ReadStates());
+
+            foreach (City city in cities)
             {
-                FileStream fs = new(file.DirectoryName, FileMode.Open, FileAccess.Read);
-                StreamReader streamReader = new(fs);
-                string content = await streamReader.ReadToEndAsync();
-
-
-                List<Cep> ceps = new();
-                foreach (string item in content.Split('\n'))
+                foreach (Cep cep in ceps)
                 {
-                    ceps.Add(new Cep(item));
+                    if (cep.CityID == city.ID)
+                    {
+                        city.Ceps.Add(cep);
+                    }
                 }
             }
 
             throw new NotImplementedException();
         }
 
-    }
-
-
-    public class Cep
-    {
-        public long Value { get; set; }
-        public string PublicPlace { get; set; }
-        public string Neighborhood { get; set; }
-        public int CityID { get; set; }
-
-        public Cep() { }
-        public Cep(string content)
+        public static State[] ReadStates()
         {
-            string[] values = content.Split(',');
+            List<State> states = new();
+            using TextFieldParser parser = new(@$"{path}\states.csv");
+            parser.TextFieldType = FieldType.Delimited;
+            parser.SetDelimiters(",");
 
-            Value = long.Parse(values[0]);
-            PublicPlace = values[1];
-            Neighborhood = values[2];
-            CityID = int.Parse(values[3]);
+            while (!parser.EndOfData)
+            {
+                string[] fields = parser.ReadFields();
+                states.Add(new(fields));
+            }
+            return states.ToArray();
+        }
+        public static City[] ReadCities()
+        {
+            List<City> cities = new();
+            using TextFieldParser parser = new(@$"{path}\cities.csv");
+            parser.TextFieldType = FieldType.Delimited;
+            parser.SetDelimiters(",");
+
+            while (!parser.EndOfData)
+            {
+                string[] fields = parser.ReadFields();
+                cities.Add(new(fields));
+            }
+
+            return cities.ToArray();
+        }
+
+        public static async Task<Cep[]> ReadCepsAsync(string[] files)
+        {
+            List<Cep> ceps = new();
+            foreach (string file in files)
+            {
+                try
+                {
+                    using TextFieldParser parser = new(file);
+                    parser.TextFieldType = FieldType.Delimited;
+                    parser.SetDelimiters(",");
+
+                    List<Cep> fileCeps = new();
+                    while (!parser.EndOfData)
+                    {
+                        //Processing row
+                        string[] fields = parser.ReadFields();
+                        fileCeps.Add(new(fields));
+                    }
+
+                    ceps.AddRange(fileCeps);
+                }
+                catch (Exception e)
+                {
+
+                }
+            }
+            return ceps.ToArray();
         }
     }
 }
