@@ -21,5 +21,26 @@ namespace Open.Cep.Migrate
             Acronym = fields[2];
         }
 
+        public Models.Models.State ToModelState()
+        {
+            return new Models.Models.State()
+            {
+                Acronym = new char[] { Acronym[0], Acronym[1] },
+                Cities = ToModelsCities(),
+                Name = Name
+            };
+        }
+
+        private Models.Models.City[] ToModelsCities()
+        {
+            List<Models.Models.City> cities = new();
+            foreach (City city in Cities)
+            {
+                cities.Add(city.ToModelCity());
+            }
+            return cities.ToArray();
+        }
+
+
     }
 }

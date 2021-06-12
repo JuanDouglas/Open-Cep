@@ -5,6 +5,6 @@ namespace Open.Cep.Models.Models
     public class City
     {
         public string Name { get; set; }
-        public List<Cep> Ceps { get; set; }
+        public Cep[] Ceps { get; set; }
     }
 }

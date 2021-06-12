@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Open.Cep.Migrate
@@ -9,36 +11,104 @@ namespace Open.Cep.Migrate
     public class Program
     {
         static string path;
+        static bool Reading;
+        static bool Organizer;
+        static bool Converting;
+        static bool Saving;
+        static bool Loading => !(Reading && Organizer && Converting && Saving);
         static void Main(string[] args)
         {
             Console.Write("Write the files path: ");
             path = Console.ReadLine();
 
+            Reading = true;
+            Task.Run(() =>
+            {
+                while (Loading)
+                {
+                    Console.Clear();
+                    if (Reading)
+                        Console.Write("Reading files");
+                    if (Organizer)
+                        Console.Write("Organize content");
+                    if (Converting)
+                        Console.Write("Converting content");
+                    if (Saving)
+                        Console.Write("Saving content");
 
-            Task ceps = ReadFiles();
+                    for (int i = 0; i < 5; i++)
+                    {
+                        Thread.Sleep(250);
+                        Console.Write(".");
+                    }
+                }
 
+            });
+
+            Task<Models.Models.State[]> states = ReadFiles();
+            states.Wait();
+            Converting = true;
+            Organizer = false;
+
+            string text = PrettyJson(Newtonsoft.Json.JsonConvert.SerializeObject(states.Result));
+           
+            Saving = true;
+            Converting = false;
+
+            if (File.Exists(@$"{path}\output.json"))
+            {
+                File.Create(@$"{path}\output.json").Close();
+            }
+
+            File.WriteAllText(@$"{path}\output.json", text);
 
         }
-
-        public static async Task<Cep[]> ReadFiles()
+        public static string PrettyJson(string unPrettyJson)
         {
+            var options = new JsonSerializerOptions()
+            {
+                WriteIndented = true
+            };
+
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(unPrettyJson);
+
+            return JsonSerializer.Serialize(jsonElement, options);
+        }
+
+        public static async Task<Models.Models.State[]> ReadFiles()
+        {
+            Reading = true;
             string[] files = Directory.GetFiles(@$"{path}\Ceps");
-            List<Cep> ceps = new(await ReadCepsAsync(files));
+            List<Cep> ceps = new(ReadCeps(files));
             List<City> cities = new(ReadCities());
             List<State> states = new(ReadStates());
+            List<Models.Models.State> modelStates = new();
 
-            foreach (City city in cities)
+            Organizer = true;
+            Reading = false;
+            for (int i = 0; i < cities.Count; i++)
             {
-                foreach (Cep cep in ceps)
+                var findResult = ceps.FindAll(find => find.CityID == cities[i].ID);
+                cities[i].Ceps = new Cep[findResult.Count];
+
+
+                for (int j = 0; j < findResult.Count; j++)
                 {
-                    if (cep.CityID == city.ID)
-                    {
-                        city.Ceps.Add(cep);
-                    }
+                    cities[i].Ceps[j] = findResult[j];
                 }
             }
 
-            throw new NotImplementedException();
+            for (int i = 0; i < states.Count; i++)
+            {
+                foreach (City city in cities.FindAll(find => find.StateID == states[i].ID))
+                {
+                    states[i].Cities.Add(city);
+                }
+                modelStates.Add(states[i].ToModelState());
+                states.RemoveAll(re => re.ID == states[i].ID);
+            }
+
+            return modelStates.ToArray();
         }
 
         public static State[] ReadStates()
@@ -71,7 +141,7 @@ namespace Open.Cep.Migrate
             return cities.ToArray();
         }
 
-        public static async Task<Cep[]> ReadCepsAsync(string[] files)
+        public static Cep[] ReadCeps(string[] files)
         {
             List<Cep> ceps = new();
             foreach (string file in files)

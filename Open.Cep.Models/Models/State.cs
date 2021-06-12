@@ -6,6 +6,6 @@ namespace Open.Cep.Models.Models
     {
         public char[] Acronym { get; set; }
         public string Name { get; set; }
-        public List<City> Cities { get; set; }
+        public City[] Cities { get; set; }
     }
 }
