@@ -11,50 +11,66 @@ namespace Open.Cep.Migrate
     public class Program
     {
         static string path;
-        static bool Reading;
-        static bool Organizer;
-        static bool Converting;
-        static bool Saving;
-        static bool Loading => !(Reading && Organizer && Converting && Saving);
+        static LoadingState LoadingState;
+        const string delimiter = ",";
+        static bool Loading => LoadingState != LoadingState.None;
         static void Main(string[] args)
         {
             Console.Write("Write the files path: ");
             path = Console.ReadLine();
 
-            Reading = true;
-            Task.Run(() =>
-            {
+            LoadingState = LoadingState.Reading;
+
+            #region LoadingTask
+            Task loading = Task.Run(
+            #region Loading Method 
+                () => {
+
                 while (Loading)
                 {
                     Console.Clear();
-                    if (Reading)
-                        Console.Write("Reading files");
-                    if (Organizer)
-                        Console.Write("Organize content");
-                    if (Converting)
-                        Console.Write("Converting content");
-                    if (Saving)
-                        Console.Write("Saving content");
+                    string text = string.Empty;
 
+
+                    switch (LoadingState)
+                    {
+                        case LoadingState.Reading:
+                            text = "Reading file";
+                            break;
+                        case LoadingState.Converting:
+                            text = "Converting Obects";
+                            break;
+                        case LoadingState.Saving:
+                            text = "Saving in file";
+                            break;
+                        case LoadingState.Organizing:
+                            text = "Organizing objects in memory";
+                            break;
+                        default:
+                            break;
+                    }
+
+                    Console.WriteLine(text);
                     for (int i = 0; i < 5; i++)
                     {
                         Thread.Sleep(250);
                         Console.Write(".");
                     }
                 }
+            }
+            #endregion 
+                );
+            if (loading.Status == TaskStatus.Created)
+                loading.Start();
+            #endregion
 
-            });
-
-            Task<Models.Models.State[]> states = ReadFiles();
+            Task<Models.Models.State[]> states = Task.Run(() => { return ReadFiles(); });
             states.Wait();
-            Converting = true;
-            Organizer = false;
 
+            LoadingState = LoadingState.Converting;
             string text = PrettyJson(Newtonsoft.Json.JsonConvert.SerializeObject(states.Result));
-           
-            Saving = true;
-            Converting = false;
 
+            LoadingState = LoadingState.Saving;
             if (File.Exists(@$"{path}\output.json"))
             {
                 File.Create(@$"{path}\output.json").Close();
@@ -75,17 +91,16 @@ namespace Open.Cep.Migrate
             return JsonSerializer.Serialize(jsonElement, options);
         }
 
-        public static async Task<Models.Models.State[]> ReadFiles()
+        public static Models.Models.State[] ReadFiles()
         {
-            Reading = true;
+            LoadingState = LoadingState.Reading;
             string[] files = Directory.GetFiles(@$"{path}\Ceps");
             List<Cep> ceps = new(ReadCeps(files));
             List<City> cities = new(ReadCities());
             List<State> states = new(ReadStates());
             List<Models.Models.State> modelStates = new();
 
-            Organizer = true;
-            Reading = false;
+            LoadingState = LoadingState.Organizing;
             for (int i = 0; i < cities.Count; i++)
             {
                 var findResult = ceps.FindAll(find => find.CityID == cities[i].ID);
@@ -116,7 +131,7 @@ namespace Open.Cep.Migrate
             List<State> states = new();
             using TextFieldParser parser = new(@$"{path}\states.csv");
             parser.TextFieldType = FieldType.Delimited;
-            parser.SetDelimiters(",");
+            parser.SetDelimiters(delimiter);
 
             while (!parser.EndOfData)
             {
@@ -130,7 +145,7 @@ namespace Open.Cep.Migrate
             List<City> cities = new();
             using TextFieldParser parser = new(@$"{path}\cities.csv");
             parser.TextFieldType = FieldType.Delimited;
-            parser.SetDelimiters(",");
+            parser.SetDelimiters(delimiter);
 
             while (!parser.EndOfData)
             {
@@ -150,7 +165,7 @@ namespace Open.Cep.Migrate
                 {
                     using TextFieldParser parser = new(file);
                     parser.TextFieldType = FieldType.Delimited;
-                    parser.SetDelimiters(",");
+                    parser.SetDelimiters(delimiter);
 
                     List<Cep> fileCeps = new();
                     while (!parser.EndOfData)
@@ -169,5 +184,15 @@ namespace Open.Cep.Migrate
             }
             return ceps.ToArray();
         }
+    }
+
+
+    public enum LoadingState : short
+    {
+        Reading,
+        Converting,
+        Saving,
+        Organizing,
+        None = 0
     }
 }
