@@ -19,7 +19,7 @@ namespace Open.Cep.Api.Controllers
         }
 
         [Route("ByCity")]
-        public async Task<ActionResult<Models.Models.Cep>> ByCityID(int city_id)
+        public async Task<ActionResult<Models.Models.Cep[]>> ByCityID(int city_id)
         {
             throw new NotImplementedException();
         }

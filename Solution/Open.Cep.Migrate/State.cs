@@ -13,7 +13,6 @@ namespace Open.Cep.Migrate
         {
             Cities = new List<City>();
         }
-
         public State(string[] fields) : this()
         {
             ID = int.Parse(fields[0]);
@@ -25,8 +24,9 @@ namespace Open.Cep.Migrate
         {
             return new Models.Models.State()
             {
-                Acronym = new char[] { Acronym[0], Acronym[1] },
+                Acronym =  Acronym.ToString(),
                 Cities = ToModelsCities(),
+                ID = ID,
                 Name = Name
             };
         }

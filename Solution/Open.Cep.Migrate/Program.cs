@@ -95,7 +95,7 @@ namespace Open.Cep.Migrate
         {
             LoadingState = LoadingState.Reading;
             string[] files = Directory.GetFiles(@$"{path}\Ceps");
-            List<Cep> ceps = new(ReadCeps(files));
+            List<Models.Models.Cep> ceps = new(ReadCeps(files));
             List<City> cities = new(ReadCities());
             List<State> states = new(ReadStates());
             List<Models.Models.State> modelStates = new();
@@ -104,7 +104,7 @@ namespace Open.Cep.Migrate
             for (int i = 0; i < cities.Count; i++)
             {
                 var findResult = ceps.FindAll(find => find.CityID == cities[i].ID);
-                cities[i].Ceps = new Cep[findResult.Count];
+                cities[i].Ceps = new Models.Models.Cep[findResult.Count];
 
 
                 for (int j = 0; j < findResult.Count; j++)
@@ -156,9 +156,9 @@ namespace Open.Cep.Migrate
             return cities.ToArray();
         }
 
-        public static Cep[] ReadCeps(string[] files)
+        public static Models.Models.Cep[] ReadCeps(string[] files)
         {
-            List<Cep> ceps = new();
+            List<Models.Models.Cep> ceps = new();
             foreach (string file in files)
             {
                 try
@@ -167,7 +167,7 @@ namespace Open.Cep.Migrate
                     parser.TextFieldType = FieldType.Delimited;
                     parser.SetDelimiters(delimiter);
 
-                    List<Cep> fileCeps = new();
+                    List<Models.Models.Cep> fileCeps = new();
                     while (!parser.EndOfData)
                     {
                         //Processing row

@@ -1,4 +1,5 @@
 ﻿using System;
+using Open.Cep.Models;
 using System.Collections.Generic;
 
 namespace Open.Cep.Migrate
@@ -8,11 +9,9 @@ namespace Open.Cep.Migrate
         public int ID { get; set; }
         public string Name { get; set; }
         public int StateID { get; set; }
-        public Cep[] Ceps { get; set; }
-        public City()
-        {
-            Ceps = Array.Empty<Cep>();
-        }
+        public Models.Models.Cep[] Ceps { get; set; }
+        public City() => Ceps = Array.Empty<Models.Models.Cep>();
+
         public City(string[] fields) : this()
         {
             ID = int.Parse(fields[0]);
@@ -24,18 +23,10 @@ namespace Open.Cep.Migrate
         {
             return new Models.Models.City() { 
                 Name = Name, 
-                Ceps = ToModelsCeps() 
+                ID= ID,
+                StateID = StateID,
+                Ceps = Ceps
             };
-        }
-
-        private Models.Models.Cep[] ToModelsCeps()
-        {
-            List<Models.Models.Cep> ceps = new();
-            foreach (Cep cep in Ceps)
-            {
-                ceps.Add(cep.ToModelCep());
-            }
-            return ceps.ToArray();
         }
     }
 }

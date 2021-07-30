@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using System;
 
 namespace Open.Cep.Api
 {
@@ -19,6 +20,8 @@ namespace Open.Cep.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            
+
             services.AddRazorPages();
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -53,6 +56,14 @@ namespace Open.Cep.Api
             app.UseRouting();
 
             app.UseAuthorization();
+
+            // Shows UseCors with CorsPolicyBuilder.
+            app.Use(async (context, next) => {
+                context.Response.Headers.Add("Access-Control-Allow-Origin","*");
+                context.Response.Headers.Add("Access-Control-Allow-Credentials", true.ToString());
+                context.Response.Headers.Add("Vary", "Origin");
+                await next.Invoke();
+            });
 
             app.UseEndpoints(endpoints =>
             {
